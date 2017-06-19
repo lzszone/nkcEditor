@@ -1,0 +1,37 @@
+{
+  "name": "nkceditor",
+  "version": "0.0.1",
+  "description": "rua",
+  "main": "index.js",
+  "dependencies": {
+    "babel-polyfill": "^6.23.0",
+    "draft-js": "^0.10.1",
+    "react": "^15.6.1",
+    "react-dom": "^15.6.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-core": "^6.25.0",
+    "babel-loader": "^7.0.0",
+    "babel-preset-env": "^1.5.2",
+    "babel-preset-react": "^6.24.1",
+    "webpack": "^2.6.1",
+    "webpack-dev-server": "^2.4.5"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lzszone/nkcEditor.git"
+  },
+  "keywords": [
+    "draft.js"
+  ],
+  "author": "lzszone",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lzszone/nkcEditor/issues"
+  },
+  "homepage": "https://github.com/lzszone/nkcEditor#readme"
+}
