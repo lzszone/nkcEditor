@@ -4,6 +4,7 @@
   "description": "rua",
   "main": "app.js",
   "dependencies": {
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-polyfill": "^6.23.0",
     "draft-js": "^0.10.1",
     "immutable": "^3.8.1",
