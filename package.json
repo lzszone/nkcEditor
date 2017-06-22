@@ -8,6 +8,7 @@
     "babel-polyfill": "^6.23.0",
     "draft-js": "^0.10.1",
     "immutable": "^3.8.1",
+    "npm": "^5.0.3",
     "react": "^15.6.1",
     "react-dom": "^15.6.1"
   },
@@ -17,11 +18,17 @@
     "babel-loader": "^7.0.0",
     "babel-preset-env": "^1.5.2",
     "babel-preset-react": "^6.24.1",
+    "css-loader": "^0.28.4",
+    "file-loader": "^0.11.2",
+    "react-hot-loader": "^3.0.0-beta.7",
+    "style-loader": "^0.18.2",
     "webpack": "^2.6.1",
     "webpack-dev-server": "^2.4.5"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --config webpack.build.js",
+    "dev": "webpack-dev-server --open --config webpack.dev.js"
   },
   "repository": {
     "type": "git",
