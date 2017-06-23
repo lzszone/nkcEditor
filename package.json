@@ -7,12 +7,16 @@
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-polyfill": "^6.23.0",
     "draft-js": "^0.10.1",
+    "draft-js-hashtag-plugin": "^2.0.0-rc2",
+    "draft-js-linkify-plugin": "^2.0.0-rc2",
+    "draft-js-plugins-editor": "^2.0.0-rc2",
     "immutable": "^3.8.1",
     "npm": "^5.0.3",
     "react": "^15.6.1",
     "react-dom": "^15.6.1"
   },
   "devDependencies": {
+    "ajv": "^5.2.0",
     "babel-cli": "^6.24.1",
     "babel-core": "^6.25.0",
     "babel-loader": "^7.0.0",
@@ -21,9 +25,11 @@
     "css-loader": "^0.28.4",
     "file-loader": "^0.11.2",
     "react-hot-loader": "^3.0.0-beta.7",
+    "source-list-map": "^2.0.0",
     "style-loader": "^0.18.2",
     "webpack": "^2.6.1",
-    "webpack-dev-server": "^2.4.5"
+    "webpack-dev-server": "^2.5.0",
+    "webpack-sources": "^1.0.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

@@ -10,7 +10,8 @@ const config = {
 
   output: {
     path: path.resolve(__dirname, './dist'),
-    filename: 'nkcEditor.js',
+    filename: 'bundle.js',
+    publicPath: "/",
   },
 
   module: {

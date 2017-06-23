@@ -24,13 +24,16 @@ const styles = {
     fontFamily: '\'Georgia\', serif',
     marginRight: 10,
     padding: 3,
+    borderRadius: 5,
+    border: 1,
+    borderStyle: 'solid',
+    borderColor: '#ccc'
   },
   link: {
     color: '#3b5998',
     textDecoration: 'underline',
   },
   editor: {
-    border: '1px solid #ccc',
     cursor: 'text',
     minHeight: 80,
     padding: 10,
@@ -57,7 +60,7 @@ function findLinkEntities(contentBlock, callback, contentState) {
 const Link = props => {
   const {url} = props.contentState.getEntity(props.entityKey).getData();
   return (
-    <a href={url} style={styles.link}>
+    <a href={url} className="btn-info">
       {props.children}
     </a>
   );
@@ -75,7 +78,8 @@ class NkcEditor extends React.Component {
     this.state = {
       editorState: EditorState.createEmpty(decorator),
       showURLInput: false,
-      urlValue: '',
+      linkNameInput: '',
+      linkUrlInput: ''
     };
 
     this.onChange = editorState => this.setState({editorState});
@@ -84,22 +88,14 @@ class NkcEditor extends React.Component {
       const content = this.state.editorState.getCurrentContent();
       console.log(convertToRaw(content));
     };
-    this.handleKeyCommand = command => this.handleKeyCommand(command);
     this.promptForLink = e => this._promptForLink(e);
-    this.onURLChange = e => this.setState({urlValue: e.target.value});
+    this.onLinkURLInputChange = e => this.setState({linkUrlInputValue: e.target.value});
+    this.onLinkNameInputChange = e => this.setState({linkNameInputValue: e.target.value});
     this.confirmLink = e => this._confirmLink(e);
-    this.onLinkInputKeyDown = e => this._onLinkInputKeyDown(e);
+    this.onLinkURLInputKeyDown = e => this._onLinkURLInputKeyDown(e);
     this.removeLink = e => this._removeLink(e);
+    this.onLinkNameInputKeyDown = e => this._onLinkNameInputKeyDown(e);
   }
-
-  handleKeyCommand(command) {
-    const newState = RichUtils.handleKeyCommand(this.state.editorState, command);
-    if(newState) {
-      this.onchange(newState);
-      return 'handled'
-    }
-    return 'not-handled'
-  };
 
   _onBoldClick() {
     this.onChange(RichUtils.toggleInlineStyle(this.state.editorState, 'BOLD'));
@@ -109,6 +105,7 @@ class NkcEditor extends React.Component {
     e.preventDefault();
     const {editorState} = this.state;
     const selection = editorState.getSelection();
+    console.log(selection);
     if(!selection.isCollapsed()) {
       const contentState = editorState.getCurrentContent();
       const startKey = editorState.getSelection().getStartKey();
@@ -124,19 +121,20 @@ class NkcEditor extends React.Component {
 
       this.setState({
         showURLInput: true,
-        urlValue: url
-      }, () => setTimeout(() => this.refs.url.focus(), 0));
+        linkUrlInputValue: url
+      }, () => setTimeout(() => this.refs.linkUrl.focus(), 0));
     }
   }
 
   _confirmLink(e) {
     e.preventDefault();
-    const {editorState, urlValue} = this.state;
+    const {editorState, linkUrlInputValue} = this.state;
     const contentState = editorState.getCurrentContent();
+    console.log(contentState);
     const contentStateWithEntity = contentState.createEntity(
       'LINK',
-      'MUTABLE',
-      {url: urlValue}
+      'IMMUTABLE',
+      {url: linkUrlInputValue}
     );
     const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
     const newEditorState = EditorState.set(editorState, {currentContent: contentStateWithEntity});
@@ -147,15 +145,21 @@ class NkcEditor extends React.Component {
           entityKey
         ),
         showURLInput: false,
-        urlValue: '',
+        linkUrlInputValue: '',
       },
       () => setTimeout(() => this.refs.editor.focus(), 0)
     )
   }
 
-  _onLinkInputKeyDown(e) {
+  _onLinkURLInputKeyDown(e) {
     if(e.which === 13) {
       this._confirmLink(e);
+    }
+  }
+
+  _onLinkNameInputKeyDown(e) {
+    if(e.which === 13) {
+      this.refs.linkUrl.focus();
     }
   }
 
@@ -175,41 +179,42 @@ class NkcEditor extends React.Component {
     if (this.state.showURLInput) {
       urlInput =
         <div style={styles.urlInputContainer}>
+          <span>链接名: </span>
           <input
-            onChange={this.onURLChange}
-            ref="url"
+            onChange={this.onLinkNameInputChange}
+            ref="linkName"
             style={styles.urlInput}
             type="text"
-            value={this.state.urlValue}
-            onKeyDown={this.onLinkInputKeyDown}
+            value={this.state.linkNameInputValue}
+            onKeyDown={this.onLinkNameInputKeyDown}
           />
-          <button onMouseDown={this.confirmLink}>
-            Confirm
-          </button>
+          <span>URL: </span>
+          <input
+            onChange={this.onLinkURLInputChange}
+            ref="linkUrl"
+            style={styles.urlInput}
+            type="text"
+            value={this.state.linkUrlInputValue}
+            onKeyDown={this.onLinkURLInputKeyDown}
+          />
+          <button onMouseDown={this.confirmLink} className="btn btn-default btn-sm">确定</button>
         </div>;
     }
 
     return (
       <div style={styles.root}>
-        <div style={{marginBottom: 10}}>
-          Select some text, then use the buttons to add or remove links on the selected text.
-        </div>
-        <div style={styles.buttons}>
-          <button
-            onMouseDown={this.promptForLink}
-            style={{marginRight: 10}}
-          >
-            Add Link
-          </button>
-          <button onMouseDown={this.removeLink}>Remove Link</button>
+        <div className="btn-toolbar">
+          <div className="btn-group">
+            <button onMouseDown={this.promptForLink} className="btn btn-default">L</button>
+            <button onMouseDown={this.removeLink} className="btn btn-default"><s>L</s></button>
+          </div>
         </div>
         {urlInput}
-        <div style={styles.editor} onClick={this.focus}>
+        <div style={styles.editor} className="panel panel-default" onClick={this.focus}>
           <Editor
             editorState={this.state.editorState}
             onChange={this.onChange}
             placeholder="input some fucking shit"
-            handleKeyCommand={this.handleKeyCommand}
             ref="editor"/>
         </div>
         <input

@@ -12,7 +12,7 @@ const render = Component => {
 render(NkcEditor);
 
 if(module.hot) {
-  module.hot.accept('./nkcEditor.js', () => {render(NkcEditor)})
+  module.hot.accept('./component/nkcEditor.js', () => {render(NkcEditor)})
 }
 
 /**
