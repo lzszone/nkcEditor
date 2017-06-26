@@ -78,6 +78,7 @@ class NkcEditor extends React.Component {
     this.state = {
       editorState: EditorState.createEmpty(decorator),
       showURLInput: false,
+      bold: false,
       linkNameInput: '',
       linkUrlInput: ''
     };
@@ -85,8 +86,8 @@ class NkcEditor extends React.Component {
     this.onChange = editorState => this.setState({editorState});
     this.focus = () => this.refs.editor.focus();
     this.logState = () => {
-      const content = this.state.editorState.getCurrentContent();
-      console.log(convertToRaw(content));
+      const content = this.state.editorState.getSelection();
+      console.log(content);
     };
     this.promptForLink = e => this._promptForLink(e);
     this.onLinkURLInputChange = e => this.setState({linkUrlInputValue: e.target.value});
@@ -98,7 +99,14 @@ class NkcEditor extends React.Component {
   }
 
   _onBoldClick() {
-    this.onChange(RichUtils.toggleInlineStyle(this.state.editorState, 'BOLD'));
+    const {editorState} = this.state;
+    const selection = editorState.getSelection();
+    if(selection.isCollapsed()) {
+      console.log('eeee')
+      this.onChange(EditorState.setInlineStyleOverride(editorState, 'BOLD'));
+      return
+    }
+    this.onChange(RichUtils.toggleInlineStyle(editorState, 'BOLD'));
   }
 
   _promptForLink(e) {
@@ -219,11 +227,11 @@ class NkcEditor extends React.Component {
         </div>
         <input
           onClick={this.logState}
-          style={styles.button}
+          className="btn btn-default"
           type="button"
           value="Log State"
         />
-        <button onClick={() => this._onBoldClick()} style={styles.button}>Bold</button>
+        <button onClick={() => this._onBoldClick()} className="btn btn-default">Bold</button>
       </div>
     );
   }
