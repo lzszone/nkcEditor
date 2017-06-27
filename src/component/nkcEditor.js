@@ -1,3 +1,5 @@
+'use strict';
+
 import React from 'react';
 import Draft from 'draft-js';
 
@@ -5,9 +7,9 @@ const {
   EditorState,
   Editor,
   RichUtils,
-  convertToRaw,
   CompositeDecorator
 } = Draft;
+
 const styles = {
   root: {
     fontFamily: '\'Helvetica\', sans-serif',
@@ -66,6 +68,109 @@ const Link = props => {
   );
 };
 
+class StyleButton extends React.Component {
+  constructor() {
+    super();
+    this.onToggle = e => {
+      e.preventDefault();
+      this.props.onToggle(this.props.style);
+    };
+  }
+
+  render() {
+    if(this.props.active) {
+      return(
+        <button className="btn btn-default" onMouseDown={this.onToggle}>
+          <del>{this.props.label}</del>
+        </button>
+      )
+    }
+    return(
+      <button className="btn btn-default" onMouseDown={this.onToggle}>
+        {this.props.label}
+      </button>
+    )
+  }
+}
+
+const styleMap = {
+  CODE: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    fontFamily: '"Inconsolata", "Menlo", "Consolas", monospace',
+    fontSize: 16,
+    padding: 2,
+  },
+};
+
+function getBlockStyle(block) {
+  switch (block.getType()) {
+    case 'blockquote': return null;
+    default: return null;
+  }
+}
+
+const BLOCK_TYPES = [
+  {label: 'H1', style: 'header-one'},
+  {label: 'H2', style: 'header-two'},
+  {label: 'H3', style: 'header-three'},
+  {label: '引', style: 'blockquote'},
+  {label: '列', style: 'unordered-list-item'},
+  {label: '数列', style: 'ordered-list-item'},
+  {label: '码', style: 'code-block'}
+];
+
+const BlockStyleController = props => {
+  const {editorState} = props;
+  const selection = editorState.getSelection();
+  const blockType = editorState
+    .getCurrentContent()
+    .getBlockForKey(selection.getStartKey())
+    .getType();
+
+  return(
+    <div className="btn-toolbar">
+      <div className="btn-group-sm">
+        {BLOCK_TYPES.map(type =>
+          <StyleButton
+            key={type.label}
+            active={type.style === blockType}
+            label={type.label}
+            onToggle={props.onToggle}
+            style={type.style}
+          />
+        )}
+      </div>
+    </div>
+  )
+};
+
+const INLINE_STYLES = [
+  {label: '粗', style: 'BOLD'},
+  {label: '斜', style: 'ITALIC'},
+  {label: '_', style: 'UNDERLINE'},
+  {label: '删', style: 'DELETE'},
+  {label: '等宽', style: 'CODE'}
+];
+
+const InlineStyleController = props => {
+  const currentStyle = props.editorState.getCurrentInlineStyle();
+  return(
+    <div className="btn-toolbar">
+      <div className="btn-group-sm">
+        {INLINE_STYLES.map(type =>
+          <StyleButton
+            key={type.label}
+            active={currentStyle.has(type.style)}
+            label={type.label}
+            onToggle={props.onToggle}
+            style={type.style}
+          />
+        )}
+      </div>
+    </div>
+  )
+};
+
 class NkcEditor extends React.Component {
   constructor(props) {
     super(props);
@@ -78,7 +183,6 @@ class NkcEditor extends React.Component {
     this.state = {
       editorState: EditorState.createEmpty(decorator),
       showURLInput: false,
-      bold: false,
       linkNameInput: '',
       linkUrlInput: ''
     };
@@ -96,40 +200,67 @@ class NkcEditor extends React.Component {
     this.onLinkURLInputKeyDown = e => this._onLinkURLInputKeyDown(e);
     this.removeLink = e => this._removeLink(e);
     this.onLinkNameInputKeyDown = e => this._onLinkNameInputKeyDown(e);
+    this.onTab = e => this._onTab(e);
+    this.toggleBlockType = type => this._toggleBlockType(type);
+    this.toggleInlineStyle = style => this._toggleInlineStyle(style);
+    this.handleKeyCommand = command => this._handleKeyCommand(command);
   }
 
-  _onBoldClick() {
+  _handleKeyCommand(command) {
     const {editorState} = this.state;
-    const selection = editorState.getSelection();
-    if(selection.isCollapsed()) {
-      console.log('eeee')
-      this.onChange(EditorState.setInlineStyleOverride(editorState, 'BOLD'));
-      return
+    const newState = RichUtils.handleKeyCommand(editorState, command);
+    if(newState) {
+      this.onChange(newState);
+      return true;
     }
-    this.onChange(RichUtils.toggleInlineStyle(editorState, 'BOLD'));
+    return false;
+  }
+
+  _onTab(e) {
+    const maxDepth = 2;
+    this.onChange(RichUtils.onTab(e, this.state.editorState, maxDepth));
+  }
+
+  _toggleBlockType(blockType) {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, blockType))
+  }
+
+  _toggleInlineStyle(style) {
+    this.onChange(
+      RichUtils.toggleInlineStyle(
+        this.state.editorState,
+        style
+      )
+    )
   }
 
   _promptForLink(e) {
     e.preventDefault();
     const {editorState} = this.state;
     const selection = editorState.getSelection();
+    const contentState = editorState.getCurrentContent();
+    const text = contentState.getPlainText();
+    console.log('selection: \n');
     console.log(selection);
     if(!selection.isCollapsed()) {
-      const contentState = editorState.getCurrentContent();
-      const startKey = editorState.getSelection().getStartKey();
-      const startOffset = editorState.getSelection().getStartOffset();
+      const startKey = selection.getStartKey();
+      const startOffset = selection.getStartOffset();
       const blockWithLinkAtBeginning = contentState.getBlockForKey(startKey);
       const linkKey = blockWithLinkAtBeginning.getEntityAt(startOffset);
-
+      console.log('contentState: \n');
+      console.log(contentState.getPlainText());
       let url = '';
+      let name = text;
       if(linkKey) {
         const linkInstance = contentState.getEntity(linkKey);
         url = linkInstance.getData().url;
+        name = linkInstance.getData().name;
       }
 
       this.setState({
         showURLInput: true,
-        linkUrlInputValue: url
+        linkUrlInputValue: url,
+        linkNameInputValue: name
       }, () => setTimeout(() => this.refs.linkUrl.focus(), 0));
     }
   }
@@ -138,7 +269,7 @@ class NkcEditor extends React.Component {
     e.preventDefault();
     const {editorState, linkUrlInputValue} = this.state;
     const contentState = editorState.getCurrentContent();
-    console.log(contentState);
+    const text = contentState.getPlainText();
     const contentStateWithEntity = contentState.createEntity(
       'LINK',
       'IMMUTABLE',
@@ -184,6 +315,7 @@ class NkcEditor extends React.Component {
 
   render() {
     let urlInput;
+    const {editorState} = this.state;
     if (this.state.showURLInput) {
       urlInput =
         <div style={styles.urlInputContainer}>
@@ -211,7 +343,15 @@ class NkcEditor extends React.Component {
 
     return (
       <div style={styles.root}>
-        <div className="btn-toolbar">
+        <BlockStyleController
+          editorState={editorState}
+          onToggle={this.toggleBlockType}
+        />
+        <InlineStyleController
+          editorState={editorState}
+          onToggle={this.toggleInlineStyle}
+        />
+        <div className="btn-toolbar-sm">
           <div className="btn-group">
             <button onMouseDown={this.promptForLink} className="btn btn-default">L</button>
             <button onMouseDown={this.removeLink} className="btn btn-default"><s>L</s></button>
@@ -220,8 +360,12 @@ class NkcEditor extends React.Component {
         {urlInput}
         <div style={styles.editor} className="panel panel-default" onClick={this.focus}>
           <Editor
-            editorState={this.state.editorState}
+            blockStyleFn={getBlockStyle}
+            customStyleMap={styleMap}
+            editorState={editorState}
             onChange={this.onChange}
+            handleKeyCommand={this.handleKeyCommand}
+            onTab={this.onTab}
             placeholder="input some fucking shit"
             ref="editor"/>
         </div>
@@ -231,7 +375,6 @@ class NkcEditor extends React.Component {
           type="button"
           value="Log State"
         />
-        <button onClick={() => this._onBoldClick()} className="btn btn-default">Bold</button>
       </div>
     );
   }
