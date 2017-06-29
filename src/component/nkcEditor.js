@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Draft from 'draft-js';
+import {Map} from 'immutable';
 
 const {
   EditorState,
@@ -100,6 +101,9 @@ const styleMap = {
     fontSize: 16,
     padding: 2,
   },
+  DELETE: {
+    textDecoration: 'line-through'
+  }
 };
 
 function getBlockStyle(block) {
@@ -110,9 +114,7 @@ function getBlockStyle(block) {
 }
 
 const BLOCK_TYPES = [
-  {label: 'H1', style: 'header-one'},
-  {label: 'H2', style: 'header-two'},
-  {label: 'H3', style: 'header-three'},
+  {label: 'H', style: 'header-two'},
   {label: '引', style: 'blockquote'},
   {label: '列', style: 'unordered-list-item'},
   {label: '数列', style: 'ordered-list-item'},
@@ -183,8 +185,8 @@ class NkcEditor extends React.Component {
     this.state = {
       editorState: EditorState.createEmpty(decorator),
       showURLInput: false,
-      linkNameInput: '',
-      linkUrlInput: ''
+      linkUrlInput: '',
+      liveTeXEdits: Map()
     };
 
     this.onChange = editorState => this.setState({editorState});
@@ -195,11 +197,9 @@ class NkcEditor extends React.Component {
     };
     this.promptForLink = e => this._promptForLink(e);
     this.onLinkURLInputChange = e => this.setState({linkUrlInputValue: e.target.value});
-    this.onLinkNameInputChange = e => this.setState({linkNameInputValue: e.target.value});
     this.confirmLink = e => this._confirmLink(e);
     this.onLinkURLInputKeyDown = e => this._onLinkURLInputKeyDown(e);
     this.removeLink = e => this._removeLink(e);
-    this.onLinkNameInputKeyDown = e => this._onLinkNameInputKeyDown(e);
     this.onTab = e => this._onTab(e);
     this.toggleBlockType = type => this._toggleBlockType(type);
     this.toggleInlineStyle = style => this._toggleInlineStyle(style);
@@ -239,28 +239,20 @@ class NkcEditor extends React.Component {
     const {editorState} = this.state;
     const selection = editorState.getSelection();
     const contentState = editorState.getCurrentContent();
-    const text = contentState.getPlainText();
-    console.log('selection: \n');
-    console.log(selection);
     if(!selection.isCollapsed()) {
       const startKey = selection.getStartKey();
       const startOffset = selection.getStartOffset();
       const blockWithLinkAtBeginning = contentState.getBlockForKey(startKey);
       const linkKey = blockWithLinkAtBeginning.getEntityAt(startOffset);
-      console.log('contentState: \n');
-      console.log(contentState.getPlainText());
       let url = '';
-      let name = text;
       if(linkKey) {
         const linkInstance = contentState.getEntity(linkKey);
         url = linkInstance.getData().url;
-        name = linkInstance.getData().name;
       }
 
       this.setState({
         showURLInput: true,
-        linkUrlInputValue: url,
-        linkNameInputValue: name
+        linkUrlInputValue: url
       }, () => setTimeout(() => this.refs.linkUrl.focus(), 0));
     }
   }
@@ -269,7 +261,6 @@ class NkcEditor extends React.Component {
     e.preventDefault();
     const {editorState, linkUrlInputValue} = this.state;
     const contentState = editorState.getCurrentContent();
-    const text = contentState.getPlainText();
     const contentStateWithEntity = contentState.createEntity(
       'LINK',
       'IMMUTABLE',
@@ -296,12 +287,6 @@ class NkcEditor extends React.Component {
     }
   }
 
-  _onLinkNameInputKeyDown(e) {
-    if(e.which === 13) {
-      this.refs.linkUrl.focus();
-    }
-  }
-
   _removeLink(e) {
     e.preventDefault(e);
     const {editorState} = this.state;
@@ -314,20 +299,12 @@ class NkcEditor extends React.Component {
   }
 
   render() {
+    let linkBtn;
     let urlInput;
     const {editorState} = this.state;
     if (this.state.showURLInput) {
       urlInput =
         <div style={styles.urlInputContainer}>
-          <span>链接名: </span>
-          <input
-            onChange={this.onLinkNameInputChange}
-            ref="linkName"
-            style={styles.urlInput}
-            type="text"
-            value={this.state.linkNameInputValue}
-            onKeyDown={this.onLinkNameInputKeyDown}
-          />
           <span>URL: </span>
           <input
             onChange={this.onLinkURLInputChange}
@@ -341,6 +318,29 @@ class NkcEditor extends React.Component {
         </div>;
     }
 
+    const selection = editorState.getSelection();
+    const contentState = editorState.getCurrentContent();
+    const entityKey = contentState
+      .getBlockForKey(selection.getStartKey())
+      .getEntityAt(selection.getStartOffset());
+    let entityInstance = {};
+    try {
+      entityInstance = contentState.getEntity(entityKey);
+    } catch(e) {
+      entityInstance = {}
+    } finally {
+      if(entityInstance.type === 'LINK') {
+        linkBtn = <button onMouseDown={this.removeLink} className="btn btn-sm btn-default">
+          <del>L</del>
+        </button>
+      }
+      else {
+        linkBtn = <button onMouseDown={this.promptForLink} className="btn btn-sm btn-default">
+          L
+        </button>
+      }
+    }
+
     return (
       <div style={styles.root}>
         <BlockStyleController
@@ -351,12 +351,7 @@ class NkcEditor extends React.Component {
           editorState={editorState}
           onToggle={this.toggleInlineStyle}
         />
-        <div className="btn-toolbar-sm">
-          <div className="btn-group">
-            <button onMouseDown={this.promptForLink} className="btn btn-default">L</button>
-            <button onMouseDown={this.removeLink} className="btn btn-default"><s>L</s></button>
-          </div>
-        </div>
+        {linkBtn}
         {urlInput}
         <div style={styles.editor} className="panel panel-default" onClick={this.focus}>
           <Editor

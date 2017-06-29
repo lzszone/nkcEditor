@@ -11,6 +11,7 @@
     "draft-js-linkify-plugin": "^2.0.0-rc2",
     "draft-js-plugins-editor": "^2.0.0-rc2",
     "immutable": "^3.8.1",
+    "katex": "^0.7.1",
     "npm": "^5.0.3",
     "react": "^15.6.1",
     "react-dom": "^15.6.1"
