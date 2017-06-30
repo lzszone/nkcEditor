@@ -3,12 +3,16 @@
 import React from 'react';
 import Draft from 'draft-js';
 import {Map} from 'immutable';
+import TexBlock from './TeXBlock';
 
 const {
   EditorState,
   Editor,
   RichUtils,
-  CompositeDecorator
+  CompositeDecorator,
+  AtomicBlockUtils,
+  Modifier,
+  SelectionState
 } = Draft;
 
 const styles = {
@@ -195,6 +199,81 @@ class NkcEditor extends React.Component {
       const content = this.state.editorState.getSelection();
       console.log(content);
     };
+
+    this._blockRenderer = block => {
+      if (block.getType() === 'atomic') {
+        return {
+          component: TexBlock,
+          editable: false,
+          props: {
+            onStartEdit: blockKey => {
+              const {liveTeXEdits} = this.state;
+              this.setState({liveTeXEdits: liveTeXEdits.set(blockKey, true)});
+            },
+            onFinishEdit: (blockKey, newContentState) => {
+              const {liveTeXEdits} = this.state;
+              this.setState({
+                liveTeXEdits: liveTeXEdits.remove(blockKey),
+                editorState:EditorState.createWithContent(newContentState),
+              });
+            },
+            onRemove: (blockKey) => this._removeTeX(blockKey),
+          },
+        };
+      }
+      return null;
+    };
+
+    this._removeTeX = blockKey => {
+      const {editorState, liveTeXEdits} = this.state;
+      const content = editorState.getCurrentContent();
+      const block = content.getBlockForKey(blockKey);
+      const targetRange = new SelectionState({
+        anchorKey: blockKey,
+        anchorOffset: 0,
+        focusKey: blockKey,
+        focusOffset: block.getLength()
+      });
+
+      const withoutTex = Modifier.removeRange(content, targetRange, 'backward');
+      const resetBlock = Modifier.setBlockType(
+        withoutTex,
+        withoutTex.getSelectionAfter(),
+        'unstyled'
+      );
+      const newState = EditorState.push(editorState, resetBlock, 'remove-range');
+      const newEditorState = EditorState.forceSelection(
+        newState,
+        resetBlock.getSelectionAfter()
+      );
+      this.setState({
+        liveTeXEdits: liveTeXEdits.remove(blockKey),
+        editorState: newEditorState
+      });
+    };
+
+    this._insertTeX = () => {
+      const {editorState} = this.state;
+      const contentState = editorState.getCurrentContent();
+      const contentStateWithEntity = contentState.createEntity(
+        'TOKEN',
+        'IMMUTABLE',
+        {content: '\\int_a^bu\\frac{d^2v}{dx^2}\\,dx\n' +
+        '=\\left.u\\frac{dv}{dx}\\right|_a^b\n' +
+        '-\\int_a^b\\frac{du}{dx}\\frac{dv}{dx}\\,dx'}
+      );
+      console.log(contentStateWithEntity);
+      const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+      const newEditorState = EditorState.set(
+        editorState,
+        {currentContent: contentStateWithEntity}
+      );
+      this.setState({
+        liveTeXEdits: Map(),
+        editorState:  AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, ' ')
+      })
+    };
+
     this.promptForLink = e => this._promptForLink(e);
     this.onLinkURLInputChange = e => this.setState({linkUrlInputValue: e.target.value});
     this.confirmLink = e => this._confirmLink(e);
@@ -352,10 +431,12 @@ class NkcEditor extends React.Component {
           onToggle={this.toggleInlineStyle}
         />
         {linkBtn}
+        <button onClick={this._insertTeX}>式</button>
         {urlInput}
         <div style={styles.editor} className="panel panel-default" onClick={this.focus}>
           <Editor
             blockStyleFn={getBlockStyle}
+            blockRendererFn={this._blockRenderer}
             customStyleMap={styleMap}
             editorState={editorState}
             onChange={this.onChange}

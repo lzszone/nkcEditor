@@ -37,17 +37,7 @@ const config = {
   },
 
   plugins: [
-    new webpack.HotModuleReplacementPlugin(),
-    new webpack.optimize.UglifyJsPlugin({
-      beautify: false,
-      comments: false,
-      compress: {
-        warnings: false,
-        drop_console: false,
-        collapse_vars: true,
-        reduce_vars: true
-      }
-    })
+    new webpack.HotModuleReplacementPlugin()
   ]
 };
 

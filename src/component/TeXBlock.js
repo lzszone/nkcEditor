@@ -15,6 +15,7 @@ class KatexOutput extends React.Component {
     }
 
     this._timer = setTimeout(() => {
+      console.log(this.props.content);
       katex.render(
         this.props.content,
         this.refs.container,
@@ -62,8 +63,8 @@ export default class TeXBlock extends React.Component {
     };
 
     this._onValueChange = evt => {
-      var value = evt.target.value;
-      var invalid = false;
+      const value = evt.target.value;
+      let invalid = false;
       try {
         katex.__parse(value);
       } catch (e) {
@@ -77,8 +78,8 @@ export default class TeXBlock extends React.Component {
     };
 
     this._save = () => {
-      var entityKey = this.props.block.getEntityAt(0);
-      var newContentState = this.props.contentState.mergeEntityData(
+      const entityKey = this.props.block.getEntityAt(0);
+      const newContentState = this.props.contentState.mergeEntityData(
         entityKey,
         {content: this.state.texValue},
       );
@@ -110,7 +111,7 @@ export default class TeXBlock extends React.Component {
   }
 
   render() {
-    var texContent = null;
+    let texContent = null;
     if (this.state.editMode) {
       if (this.state.invalidTeX) {
         texContent = '';
@@ -121,14 +122,14 @@ export default class TeXBlock extends React.Component {
       texContent = this._getValue();
     }
 
-    var className = 'TeXEditor-tex';
+    let className = 'TeXEditor-tex';
     if (this.state.editMode) {
       className += ' TeXEditor-activeTeX';
     }
 
-    var editPanel = null;
+    let editPanel = null;
     if (this.state.editMode) {
-      var buttonClass = 'TeXEditor-saveButton';
+      let buttonClass = 'TeXEditor-saveButton';
       if (this.state.invalidTeX) {
         buttonClass += ' TeXEditor-invalidButton';
       }
