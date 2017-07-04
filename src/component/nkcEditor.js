@@ -110,13 +110,6 @@ const styleMap = {
   }
 };
 
-function getBlockStyle(block) {
-  switch (block.getType()) {
-    case 'blockquote': return null;
-    default: return null;
-  }
-}
-
 const BLOCK_TYPES = [
   {label: 'H', style: 'header-two'},
   {label: '引', style: 'blockquote'},
@@ -197,7 +190,6 @@ class NkcEditor extends React.Component {
     this.focus = () => this.refs.editor.focus();
     this.logState = () => {
       const content = this.state.editorState.getSelection();
-      console.log(content);
     };
 
     this._blockRenderer = block => {
@@ -217,8 +209,8 @@ class NkcEditor extends React.Component {
                 editorState:EditorState.createWithContent(newContentState),
               });
             },
-            onRemove: (blockKey) => this._removeTeX(blockKey),
-          },
+            onRemove: blockKey => this._removeTeX(blockKey),
+          }
         };
       }
       return null;
@@ -258,11 +250,8 @@ class NkcEditor extends React.Component {
       const contentStateWithEntity = contentState.createEntity(
         'TOKEN',
         'IMMUTABLE',
-        {content: '\\int_a^bu\\frac{d^2v}{dx^2}\\,dx\n' +
-        '=\\left.u\\frac{dv}{dx}\\right|_a^b\n' +
-        '-\\int_a^b\\frac{du}{dx}\\frac{dv}{dx}\\,dx'}
+        {content: ''}
       );
-      console.log(contentStateWithEntity);
       const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
       const newEditorState = EditorState.set(
         editorState,
@@ -419,7 +408,6 @@ class NkcEditor extends React.Component {
         </button>
       }
     }
-
     return (
       <div style={styles.root}>
         <BlockStyleController
@@ -431,11 +419,10 @@ class NkcEditor extends React.Component {
           onToggle={this.toggleInlineStyle}
         />
         {linkBtn}
-        <button onClick={this._insertTeX}>式</button>
+        <button onClick={this._insertTeX} className="btn btn-default btn-sm">式</button>
         {urlInput}
         <div style={styles.editor} className="panel panel-default" onClick={this.focus}>
           <Editor
-            blockStyleFn={getBlockStyle}
             blockRendererFn={this._blockRenderer}
             customStyleMap={styleMap}
             editorState={editorState}
@@ -443,6 +430,7 @@ class NkcEditor extends React.Component {
             handleKeyCommand={this.handleKeyCommand}
             onTab={this.onTab}
             placeholder="input some fucking shit"
+            readOnly={this.state.liveTeXEdits.count()}
             ref="editor"/>
         </div>
         <input

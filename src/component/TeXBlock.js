@@ -15,7 +15,6 @@ class KatexOutput extends React.Component {
     }
 
     this._timer = setTimeout(() => {
-      console.log(this.props.content);
       katex.render(
         this.props.content,
         this.refs.container,
@@ -40,7 +39,7 @@ class KatexOutput extends React.Component {
   }
 
   render() {
-    return <div ref="container" onClick={this.props.onClick} />;
+    return <div ref="container" onClick={this.props.onClick}/>;
   }
 }
 
@@ -96,7 +95,7 @@ export default class TeXBlock extends React.Component {
     this._startEdit = () => {
       this.props.blockProps.onStartEdit(this.props.block.getKey());
     };
-    this._finishEdit = (newContentState) => {
+    this._finishEdit = newContentState => {
       this.props.blockProps.onFinishEdit(
         this.props.block.getKey(),
         newContentState,
@@ -104,10 +103,14 @@ export default class TeXBlock extends React.Component {
     };
   }
 
+  componentDidMount() {
+    this._onClick();
+  }
+
   _getValue() {
     return this.props.contentState
       .getEntity(this.props.block.getEntityAt(0))
-      .getData()['content'];
+      .getData().content;
   }
 
   render() {
@@ -155,7 +158,6 @@ export default class TeXBlock extends React.Component {
           </div>
         </div>;
     }
-
     return (
       <div className={className}>
         <KatexOutput content={texContent} onClick={this._onClick} />
