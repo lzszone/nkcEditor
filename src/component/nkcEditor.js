@@ -4,6 +4,7 @@ import React from 'react';
 import Draft from 'draft-js';
 import {Map} from 'immutable';
 import TexBlock from './TeXBlock';
+import ResourceList from './ResourceList';
 
 const {
   EditorState,
@@ -183,14 +184,14 @@ class NkcEditor extends React.Component {
       editorState: EditorState.createEmpty(decorator),
       showURLInput: false,
       linkUrlInput: '',
-      liveTeXEdits: Map()
+      liveTeXEdits: Map(),
+      resourceList: [],
+      showResourcesList: false,
+      isFetching: false
     };
 
     this.onChange = editorState => this.setState({editorState});
     this.focus = () => this.refs.editor.focus();
-    this.logState = () => {
-      const content = this.state.editorState.getSelection();
-    };
 
     this._blockRenderer = block => {
       if (block.getType() === 'atomic') {
@@ -261,6 +262,41 @@ class NkcEditor extends React.Component {
         liveTeXEdits: Map(),
         editorState:  AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, ' ')
       })
+    };
+
+    this._resourceClickHandler = (e) => {
+      this.setState({
+        showResourcesList: true,
+      });
+      nkcAPI('getResourceOfCurrentUser', {quota: 12})
+        .then(list => {
+
+        })
+        .catch(e => console.error(e.stack))
+    };
+
+    this._showResourcesListSwitch = () => {
+      const {showResourcesList, resourceList} = this.state;
+      this.setState({
+        showResourcesList: !showResourcesList
+      });
+      if(!showResourcesList && resourceList.length === 0) {
+        this._updateResourcesList();
+      }
+    };
+
+    this._updateResourcesList = () => {
+      this.setState({
+        isFetching: true
+      });
+      nkcAPI('getResourceOfCurrentUser', {quota: 12})
+        .then(list => {
+          this.setState({
+            isFetching: false,
+            resourceList: list
+          })
+        })
+        .catch(e => console.error(e.stack))
     };
 
     this.promptForLink = e => this._promptForLink(e);
@@ -408,6 +444,12 @@ class NkcEditor extends React.Component {
         </button>
       }
     }
+
+    let _resourceList;
+    if(this.state.showResourcesList) {
+      _resourceList = <ResourceList resourcesList={this.state.resourceList} clickFn={this._resourceClickHandler} />
+    }
+
     return (
       <div style={styles.root}>
         <BlockStyleController
@@ -420,6 +462,7 @@ class NkcEditor extends React.Component {
         />
         {linkBtn}
         <button onClick={this._insertTeX} className="btn btn-default btn-sm">式</button>
+        <button onClick={this._showResourcesListSwitch} className="btn btn-default btn-sm">资</button>
         {urlInput}
         <div style={styles.editor} className="panel panel-default" onClick={this.focus}>
           <Editor
@@ -433,12 +476,7 @@ class NkcEditor extends React.Component {
             readOnly={this.state.liveTeXEdits.count()}
             ref="editor"/>
         </div>
-        <input
-          onClick={this.logState}
-          className="btn btn-default"
-          type="button"
-          value="Log State"
-        />
+        {_resourceList}
       </div>
     );
   }
