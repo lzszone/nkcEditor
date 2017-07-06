@@ -5,6 +5,7 @@ import Draft from 'draft-js';
 import {Map} from 'immutable';
 import TexBlock from './TeXBlock';
 import ResourceList from './ResourceList';
+import Resource from './Resource';
 
 const {
   EditorState,
@@ -194,25 +195,44 @@ class NkcEditor extends React.Component {
     this.focus = () => this.refs.editor.focus();
 
     this._blockRenderer = block => {
+      const {editorState} = this.state;
+      const entityKey = block.getEntityAt(0);
+      let entityType;
+      if(entityKey) {
+        entityType = editorState.getCurrentContent().getEntity(entityKey).getType();
+        console.log(entityType);
+      }
       if (block.getType() === 'atomic') {
-        return {
-          component: TexBlock,
-          editable: false,
-          props: {
-            onStartEdit: blockKey => {
-              const {liveTeXEdits} = this.state;
-              this.setState({liveTeXEdits: liveTeXEdits.set(blockKey, true)});
-            },
-            onFinishEdit: (blockKey, newContentState) => {
-              const {liveTeXEdits} = this.state;
-              this.setState({
-                liveTeXEdits: liveTeXEdits.remove(blockKey),
-                editorState:EditorState.createWithContent(newContentState),
-              });
-            },
-            onRemove: blockKey => this._removeTeX(blockKey),
+        if(entityType === 'TOKEN') {
+          return {
+            component: TexBlock,
+            editable: false,
+            props: {
+              onStartEdit: blockKey => {
+                const {liveTeXEdits} = this.state;
+                this.setState({liveTeXEdits: liveTeXEdits.set(blockKey, true)});
+              },
+              onFinishEdit: (blockKey, newContentState) => {
+                const {liveTeXEdits} = this.state;
+                this.setState({
+                  liveTeXEdits: liveTeXEdits.remove(blockKey),
+                  editorState:EditorState.createWithContent(newContentState),
+                });
+              },
+              onRemove: blockKey => this._removeTeX(blockKey),
+            }
+          };
+        }
+        else if(entityType === 'resource') {
+          return {
+            component: Resource,
+            editable: false,
+            props: {}
           }
-        };
+        }
+        else {
+          return null;
+        }
       }
       return null;
     };
@@ -265,14 +285,27 @@ class NkcEditor extends React.Component {
     };
 
     this._resourceClickHandler = (e) => {
+      e.preventDefault();
+      const resource = e.resource;
+      const {editorState} = this.state;
+      const contentState = editorState.getCurrentContent();
+      const contentStateWithEntity = contentState.createEntity(
+        'resource',
+        'IMMUTABLE',
+        {resource}
+      );
+      const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+      const newEditorState = EditorState.set(
+        editorState,
+        {currentContent: contentStateWithEntity}
+      );
       this.setState({
-        showResourcesList: true,
-      });
-      nkcAPI('getResourceOfCurrentUser', {quota: 12})
-        .then(list => {
-
-        })
-        .catch(e => console.error(e.stack))
+        editorState: AtomicBlockUtils.insertAtomicBlock(
+          newEditorState,
+          entityKey,
+          ' '
+        )
+      })
     };
 
     this._showResourcesListSwitch = () => {

@@ -19,22 +19,57 @@ export default class ResourceList extends Component {
     this.state = {resourcesList}
   }
 
+  _onFilesChange(e) {
+    e.preventDefault();
+    const files = Array.from(e.target.files);
+    //translate a FileList Obj to an Array Obj, in order to use Array.map()
+
+  }
+
   render() {
-    const list = this.state.resourcesList.map(item => (
+    const list = this.state.resourcesList.map(resource => (
       <div className="ResourceListItem"
-           key={item._key}
+           key={resource._key}
            onClick={e => {
-             e.rid = item._key;
+             e.resource = resource;
              this.props.clickFn(e)
            }}
       >
-        <img className="ResourceListItemThumb" src={'/rt/' + item._key} />
-        <div className="ResourceListItemText">{fileNameHandler(item.oname)}</div>
+        <img className="ResourceListItemThumb" src={'/rt/' + resource._key} />
+        <div className="ResourceListItemText">{fileNameHandler(resource.oname)}</div>
       </div>
     ));
     return(
-      <div className="ResourceList">
-        {list}
+      <div className="panel panel-default">
+        <div className="panel-heading">
+          我的附件
+          <button
+            className="btn btn-default"
+            style={{
+              float: 'right',
+              marginTop: -7,
+              width: 60,
+              height: 33,
+              overflow: 'hidden'
+            }}
+            onClick={() => this.refs.files.click()}
+          >
+            上传
+            <input
+              type="file"
+              multiple={true}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                opacity: 0
+              }}
+              ref="files"
+              onChange={this._onFilesChange}
+            />
+          </button>
+        </div>
+        <div className="panel-body">{list}</div>
       </div>
     )
   }
