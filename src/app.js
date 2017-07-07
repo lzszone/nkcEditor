@@ -2,7 +2,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import NkcEditor from './component/nkcEditor';
+import NkcEditor from './components/nkcEditor';
 
 const render = Component => {
   ReactDOM.render(

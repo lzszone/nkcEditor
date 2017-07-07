@@ -2,13 +2,13 @@
 
 import React, {Component} from 'react';
 
-function k(num) {
-  return num.toPrecision(3)
-}
-
 function fileSizeHandler(num) {
   const size = Number(num);
-  return (size>1024)?((size>1048576)?k(size/1048576)+'M':k(size/1024)+'k'):k(size)+'b'
+  return (size>1024)?
+    ((size>1048576)?
+      (size/1048576).toPrecision(3)+'M':
+        (size/1024).toPrecision(3)+'k'):
+    size.toPrecision(3)+'b'
 }
 
 export default class Resource extends Component {

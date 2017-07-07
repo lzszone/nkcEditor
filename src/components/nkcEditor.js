@@ -2,9 +2,10 @@
 
 import React from 'react';
 import Draft from 'draft-js';
+import {stateToHTML} from 'draft-js-export-html';
 import {Map} from 'immutable';
 import TexBlock from './TeXBlock';
-import ResourceList from './ResourceList';
+import ResourcesList from './resourcesList';
 import Resource from './Resource';
 
 const {
@@ -38,10 +39,6 @@ const styles = {
     borderStyle: 'solid',
     borderColor: '#ccc'
   },
-  link: {
-    color: '#3b5998',
-    textDecoration: 'underline',
-  },
   editor: {
     cursor: 'text',
     minHeight: 80,
@@ -64,6 +61,34 @@ function findLinkEntities(contentBlock, callback, contentState) {
     },
     callback
   );
+}
+
+function xhrWithPromise(data, that) {
+  if(!data || !that) throw 'parameters invalid';
+  const formData = new FormData();
+  formData.append('file', data);
+  return new Promise((resolve, reject) => {
+    that.setState({uploadingFile: data.name});
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = e => {
+      const uploadPercentage = ((e.loaded / e.total) * 100).toPrecision(1);
+      that.setState({uploadPercentage})
+    };
+    xhr.open('POST', '/api/resources');
+    xhr.onreadystatechange = e => {
+      if(xhr.readyState === 4) {
+        if(xhr.status === 200) {
+          resolve(true)
+        } else {
+          reject(Error(xhr.statusText))
+        }
+      }
+    };
+    xhr.onerror = e => {
+      reject(Error('XMLHttpRequest failed'))
+    };
+    xhr.send(formData);
+  })
 }
 
 const Link = props => {
@@ -186,9 +211,12 @@ class NkcEditor extends React.Component {
       showURLInput: false,
       linkUrlInput: '',
       liveTeXEdits: Map(),
-      resourceList: [],
+      resourcesList: [],
       showResourcesList: false,
-      isFetching: false
+      isFetching: false,
+      uploadingFile: false,
+      uploadPercentage: false,
+      isUploading: false
     };
 
     this.onChange = editorState => this.setState({editorState});
@@ -200,7 +228,6 @@ class NkcEditor extends React.Component {
       let entityType;
       if(entityKey) {
         entityType = editorState.getCurrentContent().getEntity(entityKey).getType();
-        console.log(entityType);
       }
       if (block.getType() === 'atomic') {
         if(entityType === 'TOKEN') {
@@ -309,11 +336,11 @@ class NkcEditor extends React.Component {
     };
 
     this._showResourcesListSwitch = () => {
-      const {showResourcesList, resourceList} = this.state;
+      const {showResourcesList, resourcesList} = this.state;
       this.setState({
         showResourcesList: !showResourcesList
       });
-      if(!showResourcesList && resourceList.length === 0) {
+      if(!showResourcesList && resourcesList.length === 0) {
         this._updateResourcesList();
       }
     };
@@ -326,10 +353,34 @@ class NkcEditor extends React.Component {
         .then(list => {
           this.setState({
             isFetching: false,
-            resourceList: list
-          })
+            resourcesList: list
+          }, this.render);
         })
-        .catch(e => console.error(e.stack))
+        .catch(e => screenTopWarning(e.stack))
+    };
+
+    this._handleFilesUpload = e => {
+      const files = Array.from(e.target.files);
+      //transform a FileList to an Array;
+      const uploadQueue = files.map(file => xhrWithPromise(file, this));
+      this.setState({isUploading: true});
+      Promise.all(uploadQueue)
+        .then(() => {
+          this.setState({
+            isUploading: false,
+            uploadingFile: false,
+            uploadPercentage: false
+          }, this._updateResourcesList);
+          screenTopAlert('上传成功')
+        })
+        .catch(e => {
+          this.setState({
+            isUploading: false,
+            uploadingFile: false,
+            uploadPercentage: false
+          }, this._updateResourcesList);
+          screenTopWarning(e)
+        })
     };
 
     this.promptForLink = e => this._promptForLink(e);
@@ -341,6 +392,15 @@ class NkcEditor extends React.Component {
     this.toggleBlockType = type => this._toggleBlockType(type);
     this.toggleInlineStyle = style => this._toggleInlineStyle(style);
     this.handleKeyCommand = command => this._handleKeyCommand(command);
+    this.onSubmit = () => {
+      const {editorState} = this.state;
+      const contentState = editorState.getCurrentContent();
+      let options = {
+        inlineStyles: styleMap,
+        blockRenderers: this._blockRenderer
+      };
+      const contentInHTML = stateToHTML(contentState, options);
+    }
   }
 
   _handleKeyCommand(command) {
@@ -478,11 +538,18 @@ class NkcEditor extends React.Component {
       }
     }
 
-    let _resourceList;
+    let _resourcesList;
     if(this.state.showResourcesList) {
-      _resourceList = <ResourceList resourcesList={this.state.resourceList} clickFn={this._resourceClickHandler} />
+      _resourcesList = <ResourcesList
+        resourcesList={this.state.resourcesList}
+        clickFn={this._resourceClickHandler}
+        isFetching={this.state.isFetching}
+        handleFilesUpload={this._handleFilesUpload}
+        isUploading={this.state.isUploading}
+        uploadingFile={this.state.uploadingFile}
+        uploadPercentage={this.state.uploadPercentage}
+      />
     }
-
     return (
       <div style={styles.root}>
         <BlockStyleController
@@ -509,7 +576,7 @@ class NkcEditor extends React.Component {
             readOnly={this.state.liveTeXEdits.count()}
             ref="editor"/>
         </div>
-        {_resourceList}
+        {_resourcesList}
       </div>
     );
   }
